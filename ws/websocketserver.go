@@ -35,6 +35,14 @@ type WebSocketMessage struct {
 	Message  string `json:"message"`
 }
 
+// NewWebSocketMessage ... creates a new Websocket message
+func NewWebSocketMessage(user string, message string) *WebSocketMessage {
+	return &WebSocketMessage{
+		Username: user,
+		Message:  message,
+	}
+}
+
 func (server *WebSocketServer) handleConnections(w http.ResponseWriter, r *http.Request) {
 	// Upgrade initial GET request to a websocket
 	ws, err := upgrader.Upgrade(w, r, nil)
@@ -46,6 +54,8 @@ func (server *WebSocketServer) handleConnections(w http.ResponseWriter, r *http.
 
 	// Register our new client
 	clients[ws] = true
+
+	ws.WriteJSON(NewWebSocketMessage("", server.game.MOTD))
 
 	for {
 		var msg WebSocketMessage
@@ -93,10 +103,22 @@ func (server *WebSocketServer) OnMessage(message *game.Message) {
 
 	fmt.Println("WebSocket Server received message")
 
-	broadcast <- WebSocketMessage{
-		Username: message.User.ID,
-		Message:  message.Data,
+	var userName string = ""
+	if message.FromUser != nil {
+		userName = message.FromUser.ID
 	}
+
+	// only respond to the target user
+	if message.ToUser != nil {
+
+	} else {
+		// else broadcast this message
+		broadcast <- WebSocketMessage{
+			Username: userName,
+			Message:  message.Data,
+		}
+	}
+
 }
 
 // OnSystemMessage .. broadcast receiver

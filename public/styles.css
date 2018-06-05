@@ -71,7 +71,7 @@ main {
     margin: 0;
     padding: 15px;
     list-style: none;
-    background: #141414;
+    background: #040404;
     color: #45D40C;
     font: 0.8em 'Andale Mono', Consolas, 'Courier New';
     line-height: 1.6em;
@@ -84,7 +84,7 @@ main {
 }
 
 .shell-body input{
-    background: #141414;
+    background: #040404;
     border: #141414;
     color: #45D40C;
 }

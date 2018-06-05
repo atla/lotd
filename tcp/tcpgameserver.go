@@ -161,6 +161,7 @@ func (client *Client) registerNewUser() bool {
 func (server *Server) Join(connection net.Conn) {
 	client := NewClient(connection)
 
+	client.outgoing <- server.game.MOTD
 	client.outgoing <- "Welcome to the Lair of the Dragon\n(1) Existing Account\n(2) New Account\nChoose: "
 
 	// handle first account choice
@@ -253,11 +254,25 @@ func (server *Server) OnMessage(message *game.Message) {
 
 	fmt.Println("TCP Server received message")
 
+	var msgstring = ""
+	// message with user context
+	if message.FromUser != nil {
+		msgstring = message.FromUser.ID + ": " + message.Data + "\n"
+	} else {
+		msgstring = message.Data + "\n"
+	}
+
 	//TODO: dont send message to own client
-	var msgstring = message.User.ID + ": " + message.Data + "\n"
 
-	server.Broadcast(msgstring)
-
+	if message.ToUser != nil {
+		for _, client := range server.clients {
+			if client.user.ID == message.ToUser.ID {
+				client.outgoing <- msgstring
+			}
+		}
+	} else {
+		server.Broadcast(msgstring)
+	}
 }
 
 // Start .. starts the created server

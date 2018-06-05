@@ -45,8 +45,8 @@ func (screamCommand *ScreamCommand) Execute(game *Game, message *Message) bool {
 	parts := strings.Fields(message.Data)
 	newMsg := strings.Join(parts[1:len(parts)], " ")
 
-	var newMessage = "-- " + message.User.ID + " screams " + strings.ToUpper(newMsg) + "!!!!!"
-	game.OnMessageReceived <- NewMessage(game.SystemUser, newMessage)
+	var newMessage = "-- " + message.FromUser.ID + " screams " + strings.ToUpper(newMsg) + "!!!!!"
+	game.OnMessageReceived <- NewMessage(nil, newMessage)
 	return true
 
 }
@@ -98,15 +98,16 @@ func NewUserJoined(user *users.User) *UserJoined {
 
 // Message ... main message container to pass data from users to server and back
 type Message struct {
-	User *users.User
-	Data string
+	FromUser *users.User
+	ToUser   *users.User
+	Data     string
 }
 
 // NewMessage ... creates a new message
-func NewMessage(user *users.User, data string) *Message {
+func NewMessage(fromUser *users.User, data string) *Message {
 	return &Message{
-		User: user,
-		Data: data,
+		FromUser: fromUser,
+		Data:     data,
 	}
 }
 
@@ -120,6 +121,8 @@ type Game struct {
 	id    string
 	title string
 	rooms map[string]Room
+
+	MOTD string
 
 	running    bool
 	SystemUser *users.User
@@ -152,6 +155,7 @@ func GetInstance() *Game {
 		instance = &Game{
 			running:          true,
 			title:            "Lair of the Dragon",
+			MOTD:             "Welcome",
 			SystemUser:       users.NewUser("LOTD", "", ""),
 			CommandProcessor: NewCommandProcessor(),
 			// event channels

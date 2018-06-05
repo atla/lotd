@@ -14,10 +14,14 @@ new Vue({
         var self = this;
         this.ws = new WebSocket('ws://' + window.location.host + '/ws');
         this.ws.addEventListener('message', function (e) {
+
             var msg = JSON.parse(e.data);
-
-            self.chatContent += '<li>' + msg.username +'$  ' +emojione.toImage(msg.message) + '<li/>'; // Parse emojis
-
+            if (msg.username != undefined || msg.username == ''){
+                self.chatContent += '<li>' + msg.username +'$  ' +msg.message + '<li/>';
+            }
+            else {
+                self.chatContent += '<li><i>' + msg.message + '</i><li/>';
+            }
 
             var element = document.getElementById('chat-messages');
             element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
