@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"lotd/game"
-	"lotd/login"
-	"lotd/users"
 	"net"
 	"strings"
+
+	game "github.com/atla/lotd/game"
+	"github.com/atla/lotd/login"
+	"github.com/atla/lotd/users"
 )
 
 // Client ... asd
@@ -233,14 +234,15 @@ func (server *Server) onClientQuit(client *Client) {
 }
 
 // NewServer ... creates and returns a new TCPGameServer instance
-func NewServer(game *game.Game) *Server {
+func NewServer(port string) *Server {
 
 	server := &Server{
 		clients:  make([]*Client, 0),
 		joins:    make(chan net.Conn),
 		incoming: make(chan string),
 		outgoing: make(chan string),
-		game:     game,
+		game:     game.GetInstance(),
+		port:     port,
 	}
 
 	server.game.Subscribe(server)
@@ -278,8 +280,8 @@ func (server *Server) OnMessage(message *game.Message) {
 // Start .. starts the created server
 func (server *Server) Start() {
 
-	listener, _ := net.Listen("tcp", ":8023")
-	log.Println("Started TCP server on port 8023")
+	listener, _ := net.Listen("tcp", ":"+server.port)
+	log.Println("Started TCP server on port " + server.port)
 	for {
 		conn, _ := listener.Accept()
 		server.joins <- conn

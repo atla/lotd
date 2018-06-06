@@ -2,9 +2,10 @@ package game
 
 import (
 	"log"
-	"lotd/users"
 	"strings"
 	"sync"
+
+	"github.com/atla/lotd/users"
 )
 
 // CommandProcessor ... global user struct to control logins

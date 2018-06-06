@@ -1,10 +1,11 @@
 package main
 
 import (
-	"lotd/game"
-	"lotd/tcp"
-	"lotd/ws"
 	"net/http"
+
+	"github.com/atla/lotd/game"
+	"github.com/atla/lotd/tcp"
+	"github.com/atla/lotd/ws"
 )
 
 const motd = `
@@ -39,9 +40,9 @@ func main() {
 	fs := http.FileServer(http.Dir("public"))
 	http.Handle("/", fs)
 
-	tcpServer := tcp.NewServer(game)
+	tcpServer := tcp.NewServer("8023")
 	go tcpServer.Start()
 
-	webSocketServer := ws.NewWebSocketServer("8000")
+	webSocketServer := ws.NewWebSocketServer("8080")
 	webSocketServer.Start()
 }
