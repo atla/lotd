@@ -2,8 +2,6 @@ package game
 
 import (
 	"fmt"
-
-	"github.com/segmentio/ksuid"
 )
 
 // Room ... default entity to structure rooms
@@ -15,9 +13,7 @@ type Room struct {
 
 // NewRoom ... creates and returns a new room instance
 func NewRoom() *Room {
-	return &Room{
-		ID: ksuid.New().String(),
-	}
+	return &Room{}
 }
 
 // Enter ... processes every entity
