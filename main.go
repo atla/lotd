@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/atla/lotd/game"
 	"github.com/atla/lotd/tcp"
@@ -32,6 +34,12 @@ const motd = `
 `
 
 func main() {
+
+	logFile, err := os.OpenFile("log.txt", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if err != nil {
+		panic(err)
+	}
+	log.SetOutput(logFile)
 
 	game := game.GetInstance()
 	game.MOTD = motd
