@@ -17,7 +17,6 @@ COPY ./public /go/src/github.com/atla/lotd/public
 # either manually or with a tool like "godep".)
 
 RUN go get github.com/gorilla/websocket
-RUN go get github.com/segmentio/ksuid
 RUN go install github.com/atla/lotd
 
 # Run the outyet command by default when the container starts.
