@@ -163,7 +163,7 @@ func (server *Server) Join(connection net.Conn) {
 	client := NewClient(connection)
 
 	client.outgoing <- server.game.MOTD
-	client.outgoing <- "Welcome to the Lair of the Dragon\n(1) Existing Account\n(2) New Account\nChoose: "
+	client.outgoing <- "Welcome to the Lair of the Dragon\n(1) Existing Account (use guest:guest to look around)\n(2) New Account\nChoose: "
 
 	// handle first account choice
 

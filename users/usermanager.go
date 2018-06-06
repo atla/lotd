@@ -28,7 +28,7 @@ func (userManager *UserManager) setupTestUsers() {
 	userManager.AddUser(NewUser("atla", "test", "koerner.marcus@gmail.com"))
 	userManager.AddUser(NewUser("parci", "test", "parci.val@gmail.com"))
 	userManager.AddUser(NewUser("bilbo", "test", "bil.bo@gmail.com"))
-
+	userManager.AddUser(NewUser("guest", "guest", "guest@random.com"))
 }
 
 // AddUser .. adds a user
