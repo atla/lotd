@@ -16,8 +16,6 @@ main {
 }
 
 #chat-messages {
-    min-height: 10vh;
-    height: 70vh;
     width: 100%;
     overflow-y: scroll;
     vertical-align: bottom;
@@ -25,8 +23,8 @@ main {
 
 
 .shell-wrap {
-    width: 80vw;
-    height: 70vh;
+    width: 800px;
+    height: 600px;
     
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
     -webkit-border-radius: 3px;

@@ -30,14 +30,44 @@
             </section>
         </header>
 
-        <div class="shell-wrap">
-                <ul id="chat-messages" class="shell-body" v-html="chatContent">
-                </ul>
-            
-            <div class="shell-body" v-if="joined">
-                <span class="col-3">atla@Room 1></span>
-                <input class="col-9" type="text" placeholder="" v-model="newMsg" @keyup.enter="send">
+        <div class="columns">
+            <div class="column">
+
+                <div class="card" v-if="room">
+                    <div class="card-image">
+                        <img src="img/osx-el-capitan.jpg" class="img-responsive">
+                    </div>
+                    <div class="card-header">
+                        <div class="card-title h5">room.Title</div>
+                        <div class="card-subtitle text-gray">room.ID</div>
+                    </div>
+                    <div class="card-body">
+                        room.Description
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary">(N)orth</button>
+                        <button class="btn btn-primary">(S)outh</button>
+                    </div>
+                </div>
+
             </div>
+            <div class="divider-vert" data-content="OR"></div>
+            <div class="column">
+                <div class="shell-wrap">
+                    <ul id="chat-messages" class="shell-body" v-html="chatContent">
+                    </ul>
+
+                    <div class="shell-body" v-if="joined">
+                        <span class="col-3">atla@Room 1></span>
+                        <input class="col-9" type="text" placeholder="" v-model="newMsg" @keyup.enter="send">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
     </main>
 
     <script src="https://unpkg.com/vue@2.1.3/dist/vue.min.js"></script>

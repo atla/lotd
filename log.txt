@@ -1,0 +1,41 @@
+2018/06/07 09:54:28 http server started on :8080
+2018/06/07 09:54:28 Started TCP server on port 8023
+2018/06/07 09:54:41 http server started on :8080
+2018/06/07 09:54:41 Started TCP server on port 8023
+2018/06/07 09:55:30 http server started on :8080
+2018/06/07 09:55:30 Started TCP server on port 8023
+2018/06/07 09:55:46 User logging in
+2018/06/07 09:55:47 Received login challenge with user atla and password test
+2018/06/07 09:55:49 Forwarding message to game instance hello world
+2018/06/07 09:55:51 Forwarding message to game instance this is great
+2018/06/07 09:56:02 User logging in
+2018/06/07 09:56:04 Received login challenge with user guest and password guest
+2018/06/07 09:56:16 Forwarding message to game instance hi there
+2018/06/07 09:56:19 Forwarding message to game instance i dont now whats up
+2018/06/07 09:56:21 Forwarding message to game instance scream this is great
+2018/06/07 09:56:21 Found command scream executing...
+2018/06/07 09:56:25 Forwarding message to game instance scream are you sure
+2018/06/07 09:56:25 Found command scream executing...
+2018/06/07 14:01:31 http server started on :8080
+2018/06/07 14:01:31 Started TCP server on port 8023
+2018/06/07 14:02:14 User logging in
+2018/06/07 14:02:15 Received login challenge with user atla and password tes
+2018/06/07 14:15:50 http server started on :8080
+2018/06/07 14:15:50 Started TCP server on port 8023
+2018/06/07 14:15:56 User logging in
+2018/06/07 14:15:58 Received login challenge with user atla and password test
+2018/06/07 14:22:56 http server started on :8080
+2018/06/07 14:22:56 Started TCP server on port 8023
+2018/06/07 14:22:59 User logging in
+2018/06/07 14:23:01 Received login challenge with user atla and password test
+2018/06/07 14:23:24 http server started on :8080
+2018/06/07 14:23:24 Started TCP server on port 8023
+2018/06/07 14:23:27 http server started on :8080
+2018/06/07 14:23:27 Started TCP server on port 8023
+2018/06/07 14:23:31 User logging in
+2018/06/07 14:23:32 Received login challenge with user atla and password test
+2018/06/07 14:23:48 Forwarding message to game instance scream what
+2018/06/07 14:23:48 Found command scream executing...
+2018/06/07 14:24:02 Forwarding message to game instance hello, is anyone out there
+2018/06/08 08:59:28 http server started on :8080
+2018/06/08 08:59:28 Started TCP server on port 8023

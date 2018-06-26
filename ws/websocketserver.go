@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,42 +12,72 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var clients = make(map[*websocket.Conn]bool) // connected clients
-var broadcast = make(chan WebSocketMessage)  // broadcast channel
-// Configure the upgrader
-var upgrader = websocket.Upgrader{}
+// Server ... Define our message object
+type Server struct {
+	port      string
+	game      *game.Game
+	Clients   map[*websocket.Conn]bool
+	Users     map[string]*websocket.Conn
+	Broadcast chan Message
+	upgrader  websocket.Upgrader
 
-// WebSocketServer ... Define our message object
-type WebSocketServer struct {
-	port string
-	game *game.Game
+	MessageHandler *MessageHandler
 }
 
-// NewWebSocketServer ... creates a new websocketserver instance
-func NewWebSocketServer(port string) *WebSocketServer {
-	return &WebSocketServer{
-		port: port,
-		game: game.GetInstance(),
+// NewServer ... creates a new websocketserver instance
+func NewServer(port string) *Server {
+	server := &Server{
+		port:      port,
+		Clients:   make(map[*websocket.Conn]bool),
+		Users:     make(map[string]*websocket.Conn),
+		Broadcast: make(chan Message),
+		upgrader:  websocket.Upgrader{},
+		game:      game.GetInstance(),
 	}
+
+	server.MessageHandler = NewMessageHandler(server)
+
+	return server
 }
 
-// WebSocketMessage ... Define our message object
-type WebSocketMessage struct {
+// Message ... Define our message object
+type Message struct {
+	Type     string `json:"type"`
 	Username string `json:"username"`
 	Message  string `json:"message"`
 }
 
 // NewWebSocketMessage ... creates a new Websocket message
-func NewWebSocketMessage(user string, message string) *WebSocketMessage {
-	return &WebSocketMessage{
+func NewWebSocketMessage(user string, message string) *Message {
+	return &Message{
+		Type:     "message",
 		Username: user,
 		Message:  message,
 	}
 }
 
-func (server *WebSocketServer) handleConnections(w http.ResponseWriter, r *http.Request) {
+// DisplayRoom ...
+type DisplayRoom struct {
+	Type string     `json:"type"`
+	Room *game.Room `json:"room"`
+}
+
+// NewDisplayRoom ... creates new display room message
+func NewDisplayRoom(room *game.Room) *DisplayRoom {
+
+	if room == nil {
+		log.Panic("no room to create displayRoom message")
+	}
+
+	return &DisplayRoom{
+		Type: "displayRoom",
+		Room: room,
+	}
+}
+
+func (server *Server) handleConnections(w http.ResponseWriter, r *http.Request) {
 	// Upgrade initial GET request to a websocket
-	ws, err := upgrader.Upgrade(w, r, nil)
+	ws, err := server.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,85 +85,86 @@ func (server *WebSocketServer) handleConnections(w http.ResponseWriter, r *http.
 	defer ws.Close()
 
 	// Register our new client
-	clients[ws] = true
+	server.Clients[ws] = true
 
 	ws.WriteJSON(NewWebSocketMessage("", server.game.MOTD))
 
 	for {
-		var msg WebSocketMessage
+		var msg Message
 		// Read in a new message as JSON and map it to a Message object
 		err := ws.ReadJSON(&msg)
 		if err != nil {
 			log.Printf("error: %v", err)
-			delete(clients, ws)
+			delete(server.Clients, ws)
 			break
 		}
 
-		var user = users.GetInstance().FindUserByID(msg.Username)
+		user, _ := users.GetInstance().FindUserByID(msg.Username)
 
 		// send join message
 		if !user.Active {
+			server.Users[user.ID] = ws
 			user.Active = true
 			server.game.OnUserJoined <- game.NewUserJoined(user)
 		}
 
-		var message = game.NewMessage(user, msg.Message)
-
-		server.game.OnMessageReceived <- message
+		if msg.Message != "" {
+			var message = game.NewMessage(user, msg.Message)
+			server.game.OnMessageReceived <- message
+		}
 	}
 }
 
-func (server *WebSocketServer) handleMessages() {
+func (server *Server) sendMessage(id string, msg interface{}) {
+
+	switch x := msg.(type) {
+	case Message:
+		fmt.Println(json.MarshalIndent(x, "", "    "))
+
+	case DisplayRoom:
+		fmt.Println(json.MarshalIndent(x, "", "    "))
+
+	}
+
+	if client, ok := server.Users[id]; ok {
+		err := client.WriteJSON(msg)
+		if err != nil {
+			log.Printf("error: %v", err)
+			client.Close()
+			delete(server.Clients, client)
+			delete(server.Users, id)
+		}
+	}
+}
+
+func (server *Server) handleMessages() {
 	for {
 		// Grab the next message from the broadcast channel
-		msg := <-broadcast
+		msg := <-server.Broadcast
 
 		// Send it out to every client that is currently connected
-		for client := range clients {
+		for client := range server.Clients {
 			err := client.WriteJSON(msg)
 			if err != nil {
 				log.Printf("error: %v", err)
 				client.Close()
-				delete(clients, client)
+				delete(server.Clients, client)
 			}
 		}
 	}
 }
 
-// OnMessage .. broadcast receiver
-func (server *WebSocketServer) OnMessage(message *game.Message) {
-
-	fmt.Println("WebSocket Server received message")
-
-	var userName string = ""
-	if message.FromUser != nil {
-		userName = message.FromUser.ID
-	}
-
-	// only respond to the target user
-	if message.ToUser != nil {
-
-	} else {
-		// else broadcast this message
-		broadcast <- WebSocketMessage{
-			Username: userName,
-			Message:  message.Data,
-		}
-	}
-
-}
-
 // OnSystemMessage .. broadcast receiver
-func (server *WebSocketServer) OnSystemMessage(message *game.Message) {
+func (server *Server) OnSystemMessage(message *game.Message) {
 
-	broadcast <- WebSocketMessage{
+	server.Broadcast <- Message{
 		Username: "#SYSTEM",
 		Message:  message.Data,
 	}
 }
 
 // Start ... start websocketserver
-func (server *WebSocketServer) Start() {
+func (server *Server) Start() {
 
 	// Configure websocket route
 	http.HandleFunc("/ws", server.handleConnections)
@@ -140,7 +172,7 @@ func (server *WebSocketServer) Start() {
 	// Start listening for incoming chat messages
 	go server.handleMessages()
 
-	game.GetInstance().Subscribe(server)
+	game.GetInstance().Subscribe(server.MessageHandler)
 
 	// Start the server on localhost port 8000 and log any errors
 	log.Println("http server started on :" + server.port)

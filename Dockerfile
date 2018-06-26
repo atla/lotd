@@ -23,5 +23,5 @@ RUN go install github.com/atla/lotd
 ENTRYPOINT /go/bin/lotd
 
 # Document that the service listens on port 8080.
-EXPOSE 8080
+EXPOSE 8000
 EXPOSE 8023

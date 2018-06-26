@@ -84,8 +84,9 @@ func (client *Client) loginWithPassword() bool {
 	log.Println("User logging in")
 
 	client.outgoing <- "User: "
+
 	var user = <-client.incoming
-	user = user[0 : len(user)-1]
+	user = strings.TrimSuffix(strings.TrimSuffix(user, "\n"), "\r")
 
 	// turn of user echo on client side
 	//client.connection.Write(echoOff)
@@ -94,7 +95,7 @@ func (client *Client) loginWithPassword() bool {
 
 	client.outgoing <- "Password: "
 	var password = <-client.incoming
-	password = strings.TrimSuffix(password, "\n")
+	password = strings.TrimSuffix(strings.TrimSuffix(password, "\n"), "\r")
 
 	// turn on user echo on client side
 	//	client.outgoing <- string(echoOn)
@@ -103,7 +104,7 @@ func (client *Client) loginWithPassword() bool {
 	var loginSuccessful = loginManager.Login(user, password)
 
 	if loginSuccessful {
-		client.user = userManager.FindUserByID(user)
+		client.user, _ = userManager.FindUserByID(user)
 
 		fmt.Println("FOUND USER " + client.user.ID)
 
@@ -122,9 +123,9 @@ func (client *Client) registerNewUser() bool {
 	for userExists {
 		client.outgoing <- "User: "
 		user = <-client.incoming
-		user = user[0 : len(user)-1]
+		user = strings.TrimSuffix(strings.TrimSuffix(user, "\n"), "\r")
 
-		if users.GetInstance().FindUserByID(user) == nil {
+		if _, err := users.GetInstance().FindUserByID(user); err != nil {
 			userExists = false
 		} else {
 			log.Println("User already exists.")
@@ -137,8 +138,11 @@ func (client *Client) registerNewUser() bool {
 	for !passwordMatches {
 		client.outgoing <- "Password: "
 		password = <-client.incoming
+		password = strings.TrimSuffix(strings.TrimSuffix(password, "\n"), "\r")
+
 		client.outgoing <- "Password (repeat): "
 		var password2 = <-client.incoming
+		password2 = strings.TrimSuffix(strings.TrimSuffix(password2, "\n"), "\r")
 
 		passwordMatches = password == password2
 
@@ -195,16 +199,21 @@ func (server *Server) Join(connection net.Conn) {
 
 			var clientMessage = <-client.incoming
 
-			fmt.Println("Received message: " + clientMessage)
+			if clientMessage != "" {
 
-			if strings.HasPrefix(clientMessage, "exit") {
-				server.onClientQuit(client)
-				return
+				log.Println("TCP: " + clientMessage)
+
+				// TODO: exit should be a command?
+				if strings.HasPrefix(clientMessage, "exit") {
+					server.onClientQuit(client)
+					return
+				}
+
+				log.Println("Forwarding message to game instance " + clientMessage)
+
+				server.game.OnMessageReceived <- game.NewMessage(client.user, clientMessage)
+
 			}
-
-			log.Println("Forwarding message to game instance " + clientMessage)
-
-			server.game.OnMessageReceived <- game.NewMessage(client.user, clientMessage)
 		}
 	}()
 }
@@ -217,7 +226,8 @@ type Server struct {
 	incoming chan string
 	outgoing chan string
 
-	game *game.Game
+	game           *game.Game
+	MessageHandler *MessageHandler
 }
 
 func (server *Server) onClientQuit(client *Client) {
@@ -245,36 +255,21 @@ func NewServer(port string) *Server {
 		port:     port,
 	}
 
-	server.game.Subscribe(server)
+	server.MessageHandler = NewMessageHandler(server)
+	server.game.Subscribe(server.MessageHandler)
 	server.listen()
 
 	return server
 }
 
-// OnMessage .. broadcast receiver
-func (server *Server) OnMessage(message *game.Message) {
-
-	fmt.Println("TCP Server received message")
-
-	var msgstring = ""
-	// message with user context
-	if message.FromUser != nil {
-		msgstring = message.FromUser.ID + ": " + message.Data + "\n"
-	} else {
-		msgstring = message.Data + "\n"
-	}
-
-	//TODO: dont send message to own client
-
-	if message.ToUser != nil {
-		for _, client := range server.clients {
-			if client.user.ID == message.ToUser.ID {
-				client.outgoing <- msgstring
-			}
+func (server *Server) getClientByID(id string) (*Client, bool) {
+	for _, client := range server.clients {
+		if client.user.ID == id {
+			return client, true
 		}
-	} else {
-		server.Broadcast(msgstring)
 	}
+	// not found
+	return nil, false
 }
 
 // Start .. starts the created server

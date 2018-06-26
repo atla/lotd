@@ -1,127 +1,16 @@
 package game
 
 import (
-	"log"
-	"strings"
 	"sync"
 
 	"github.com/atla/lotd/users"
 )
 
-// CommandProcessor ... global user struct to control logins
-type CommandProcessor struct {
-	commands map[string]Command
-}
-
-// RegisterCommand ... register
-func (commandProcessor *CommandProcessor) RegisterCommand(key string, command Command) {
-	commandProcessor.commands[key] = command
-}
-
-// Process ...asd
-func (commandProcessor *CommandProcessor) Process(game *Game, message *Message) bool {
-
-	parts := strings.Fields(message.Data)
-
-	if len(parts) > 0 {
-		var key = parts[0]
-		if val, ok := commandProcessor.commands[key]; ok {
-
-			log.Println("Found command " + key + " executing...")
-			return val.Execute(game, message)
-		}
-	}
-
-	return false
-
-}
-
-// ScreamCommand ... foo
-type ScreamCommand struct {
-}
-
-// Execute ... executes scream command
-func (screamCommand *ScreamCommand) Execute(game *Game, message *Message) bool {
-
-	parts := strings.Fields(message.Data)
-	newMsg := strings.Join(parts[1:len(parts)], " ")
-
-	var newMessage = "-- " + message.FromUser.ID + " screams " + strings.ToUpper(newMsg) + "!!!!!"
-	game.OnMessageReceived <- NewMessage(nil, newMessage)
-	return true
-
-}
-
-func (commandProcessor *CommandProcessor) registerCommands() {
-
-	commandProcessor.RegisterCommand("scream", &ScreamCommand{})
-
-}
-
-// NewCommandProcessor .. creates a new command processor
-func NewCommandProcessor() *CommandProcessor {
-	var commandProcessor = &CommandProcessor{
-		commands: make(map[string]Command),
-	}
-	// only once?
-	commandProcessor.registerCommands()
-	return commandProcessor
-}
-
-// Command ... commands
-type Command interface {
-	Execute(game *Game, message *Message) bool
-}
-
-//UserJoined ... player joined event
-type UserJoined struct {
-	User *users.User
-}
-
-//UserQuit ... player joined event
-type UserQuit struct {
-	User *users.User
-}
-
-// NewUserQuit ... creates a new User Joined event
-func NewUserQuit(user *users.User) *UserQuit {
-	return &UserQuit{
-		User: user,
-	}
-}
-
-// NewUserJoined ... creates a new User Joined event
-func NewUserJoined(user *users.User) *UserJoined {
-	return &UserJoined{
-		User: user,
-	}
-}
-
-// Message ... main message container to pass data from users to server and back
-type Message struct {
-	FromUser *users.User
-	ToUser   *users.User
-	Data     string
-}
-
-// NewMessage ... creates a new message
-func NewMessage(fromUser *users.User, data string) *Message {
-	return &Message{
-		FromUser: fromUser,
-		Data:     data,
-	}
-}
-
-// Receiver ... rec
-type Receiver interface {
-	OnMessage(message *Message)
-}
-
 // Game ... default entity to structure rooms
 type Game struct {
 	id    string
 	title string
-	rooms map[string]Room
+	world *World
 
 	MOTD string
 
@@ -132,9 +21,14 @@ type Game struct {
 	OnUserJoined      chan *UserJoined
 	OnUserQuit        chan *UserQuit
 
+	OnAvatarJoinedRoom chan *AvatarJoinedRoom
+	OnAvatarLeftRoom   chan *AvatarLeftRoom
+
 	Receivers []Receiver
 
 	CommandProcessor *CommandProcessor
+
+	Avatars map[string]*Avatar
 }
 
 var instance *Game
@@ -143,6 +37,11 @@ var once sync.Once
 // Subscribe ... sub
 func (game *Game) Subscribe(receiver Receiver) {
 	game.Receivers = append(game.Receivers, receiver)
+}
+
+// Receiver ... rec
+type Receiver interface {
+	OnMessage(message interface{})
 }
 
 /*
@@ -159,13 +58,18 @@ func GetInstance() *Game {
 			MOTD:             "Welcome",
 			SystemUser:       users.NewUser("LOTD", "", ""),
 			CommandProcessor: NewCommandProcessor(),
+			world:            NewWorld("LOTD"),
 			// event channels
-			OnMessageReceived: make(chan *Message, 10),
-			OnUserJoined:      make(chan *UserJoined, 10),
-			OnUserQuit:        make(chan *UserQuit, 10),
+			OnMessageReceived:  make(chan *Message, 20),
+			OnUserJoined:       make(chan *UserJoined, 20),
+			OnUserQuit:         make(chan *UserQuit, 20),
+			OnAvatarJoinedRoom: make(chan *AvatarJoinedRoom, 20),
+			OnAvatarLeftRoom:   make(chan *AvatarLeftRoom, 20),
 
 			// game update listeners
 			Receivers: make([]Receiver, 0, 10),
+
+			Avatars: make(map[string]*Avatar),
 		}
 		instance.run()
 	})
@@ -175,13 +79,42 @@ func GetInstance() *Game {
 // CreateRoom ... processes every entity
 func (game *Game) CreateRoom(title string) *Room {
 
-	room := NewRoom()
+	room := NewRoom("randomid", title, "description")
 	return room
 }
 
 // ID ... returns the id of the room
 func (game *Game) ID() string {
 	return game.id
+}
+
+func (game *Game) sendMessage(message interface{}) {
+	// broeadcast message
+	for _, receiver := range game.Receivers {
+		receiver.OnMessage(message)
+	}
+}
+
+func (game *Game) loadAvatarForUser(user *users.User) {
+
+	if avatar, ok := game.Avatars[user.ID]; ok {
+
+		avatar.CurrentUser = user
+
+		if avatar.LastKnownRoom == nil {
+			avatar.LastKnownRoom = game.world.GetStartingRoom()
+		}
+
+		avatar.LastKnownRoom.Enter(avatar)
+
+	} else {
+		var newAvatar = NewAvatar()
+		newAvatar.ID = user.ID
+		game.Avatars[user.ID] = newAvatar
+
+		game.loadAvatarForUser(user)
+	}
+
 }
 
 // main game loop
@@ -192,24 +125,32 @@ func (game *Game) run() {
 			select {
 			case userJoined := <-game.OnUserJoined:
 
-				var msg = NewMessage(game.SystemUser, userJoined.User.ID+" joined.")
-				game.OnMessageReceived <- msg
+				game.loadAvatarForUser(userJoined.User)
+
+				//TODO: remove? only inform avatars in same room?
+			//	game.sendMessage(NewMessage(game.SystemUser, userJoined.User.ID+" joined."))
 
 			case userQuit := <-game.OnUserQuit:
 
-				var msg = NewMessage(game.SystemUser, userQuit.User.ID+" quitted.")
-				game.OnMessageReceived <- msg
+				_ = userQuit
+
+			//	game.sendMessage(NewMessage(game.SystemUser, userQuit.User.ID+" quitted."))
+
+			case avatarJoinedRoom := <-game.OnAvatarJoinedRoom:
+
+				//	var user = avatarJoinedRoom.Avatar.CurrentUser
+				//	var msg = NewMessage(nil, "=== "+avatarJoinedRoom.Room.Title+" ===\n"+avatarJoinedRoom.Room.Description)
+
+				//	msg.ToUser = user
+
+				game.sendMessage(avatarJoinedRoom)
 
 			case message := <-game.OnMessageReceived:
 
 				// only broadcast if commandprocessor didnt process it
 				if !game.CommandProcessor.Process(game, message) {
-					// broeadcast message
-					for _, receiver := range game.Receivers {
-						receiver.OnMessage(message)
-					}
+					game.sendMessage(message)
 				}
-
 			}
 		}
 	}()

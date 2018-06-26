@@ -1,9 +1,7 @@
 package main
 
 import (
-	"log"
 	"net/http"
-	"os"
 
 	"github.com/atla/lotd/game"
 	"github.com/atla/lotd/tcp"
@@ -35,12 +33,12 @@ const motd = `
 
 func main() {
 
-	logFile, err := os.OpenFile("log.txt", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	/*logFile, err := os.OpenFile("log.txt", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		panic(err)
 	}
 	log.SetOutput(logFile)
-
+	*/
 	game := game.GetInstance()
 	game.MOTD = motd
 
@@ -51,6 +49,6 @@ func main() {
 	tcpServer := tcp.NewServer("8023")
 	go tcpServer.Start()
 
-	webSocketServer := ws.NewWebSocketServer("8080")
+	webSocketServer := ws.NewServer("8000")
 	webSocketServer.Start()
 }

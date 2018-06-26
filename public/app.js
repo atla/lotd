@@ -5,6 +5,7 @@ new Vue({
         ws: null, // Our websocket
         newMsg: '', // Holds new messages to be sent to the server
         chatContent: '', // A running list of chat messages displayed on the screen
+        room: null,
         email: null, // Email address used for grabbing an avatar
         username: null, // Our username
         joined: false // True if email and username have been filled in
@@ -16,15 +17,29 @@ new Vue({
         this.ws.addEventListener('message', function (e) {
 
             var msg = JSON.parse(e.data);
-            if (msg.username != undefined || msg.username == ''){
-                self.chatContent += '<li>' + msg.username +'$  ' +msg.message + '<li/>';
-            }
-            else {
-                self.chatContent += '<li><i>' + msg.message + '</i><li/>';
+
+            switch (msg.type) {
+                case 'displayRoom':
+
+                    self.room = msg.room;
+
+                    break;
+
+                    
+                default:
+
+                if (msg.username != undefined || msg.username == '') {
+                    self.chatContent += '<li>' + msg.username + '$  ' + msg.message + '<li/>';
+                } else {
+                    self.chatContent += '<li><pre>' + msg.message + '</pre><li/>';
+                }
+    
+                var element = document.getElementById('chat-messages');
+                element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
+                    break;
             }
 
-            var element = document.getElementById('chat-messages');
-            element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
+           
         });
     },
 
