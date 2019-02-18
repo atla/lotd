@@ -2,8 +2,9 @@ package game
 
 import (
 	"encoding/json"
+	"time"
 
-	"github.com/atla/lotd/ldb"
+	"github.com/globalsign/mgo/bson"
 )
 
 // World ... default entity to structure rooms
@@ -11,14 +12,12 @@ import (
 // managed from the World class - all generic game/message/command related things will reside in the game
 // class
 type World struct {
-	ID string
+	ID          bson.ObjectId `json:"id,omitempty" bson:"_id,omitempty"`
+	DateCreated time.Time     `json:"dateCreated,omitempty"`
 
-	Rooms          map[string]*Room   `json:rooms"`
-	Avatars        map[string]*Avatar `json:avatars"`
-	StartingRoomID string
-
-	RoomDB   *ldb.Helper
-	AvatarDB *ldb.Helper
+	Rooms          []*Room   `json:"rooms,omitempty"`
+	Avatars        []*Avatar `json:"avatars,omitempty"`
+	StartingRoomID string    `json:"startingRoomId,omitempty"`
 }
 
 func createStartingRoom() *Room {
@@ -29,12 +28,6 @@ in the distance you can see the bright lights of a village.
 		
 From here you can either head (n)orth or (s)outh.`)
 
-}
-
-// restore from database files
-func (world *World) restoreFromDatabase() {
-	world.RoomDB = ldb.NewHelper(world.ID + "/rooms/")
-	world.AvatarDB = ldb.NewHelper(world.ID + "/avatars/")
 }
 
 // GetRoom ...
@@ -72,7 +65,7 @@ func NewWorld(id string) *World {
 
 	startingRoom := createStartingRoom()
 	world.AddRoom(*startingRoom)
-	world.StartingRoomID = startingRoom.ID
+	world.StartingRoomID = startingRoom.ID.String()
 
 	return world
 }

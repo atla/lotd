@@ -1,23 +1,32 @@
 package game
 
-import "log"
+import (
+	"log"
+	"time"
+
+	"github.com/globalsign/mgo/bson"
+)
 
 // Room ... default entity to structure rooms
 type Room struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
+	ID           bson.ObjectId `json:"id,omitempty" bson:"_id,omitempty"`
+	Title        string        `json:"title"`
+	Description  string        `json:"description"`
+	CreationDate time.Time     `json:"creationDate,omitempty"`
 
 	Avatars []*Avatar `json:"avatars"`
+
+	//instance
 }
 
 // NewRoom ... creates and returns a new room instance
 func NewRoom(id string, title string, description string) *Room {
 	return &Room{
-		ID:          id,
-		Title:       title,
-		Description: description,
-		Avatars:     []*Avatar{},
+		ID:           bson.NewObjectId(),
+		Title:        title,
+		Description:  description,
+		CreationDate: time.Now(),
+		Avatars:      []*Avatar{},
 	}
 }
 
@@ -45,9 +54,9 @@ func (room *Room) removeAvatarFromRoom(avatar *Avatar) {
 func (room *Room) Enter(avatar *Avatar) {
 
 	log.Println("avatar entered room " + avatar.CurrentUser.ID + " room: " + room.Title)
-
+avatar.
 	avatar.LastKnownRoom = room
-	GetInstance().OnAvatarJoinedRoom <- &AvatarJoinedRoom{
+	game.OnAvatarJoinedRoom <- &AvatarJoinedRoom{
 		Avatar: avatar,
 		Room:   room,
 	}

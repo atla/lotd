@@ -10,6 +10,7 @@ import (
 	game "github.com/atla/lotd/game"
 	"github.com/atla/lotd/login"
 	"github.com/atla/lotd/users"
+	"go.uber.org/fx"
 )
 
 // Client ... asd
@@ -218,6 +219,12 @@ func (server *Server) Join(connection net.Conn) {
 	}()
 }
 
+// Module ... fx module export
+var Module = fx.Provide(func(game *game.Game) *Server {
+	// TODO: read TCP port from environment variable
+	return NewServer(game, "8023")
+})
+
 // Server ... tbd
 type Server struct {
 	port     string
@@ -244,14 +251,14 @@ func (server *Server) onClientQuit(client *Client) {
 }
 
 // NewServer ... creates and returns a new TCPGameServer instance
-func NewServer(port string) *Server {
+func NewServer(game *game.Game, port string) *Server {
 
 	server := &Server{
 		clients:  make([]*Client, 0),
 		joins:    make(chan net.Conn),
 		incoming: make(chan string),
 		outgoing: make(chan string),
-		game:     game.GetInstance(),
+		game:     game,
 		port:     port,
 	}
 
@@ -270,6 +277,11 @@ func (server *Server) getClientByID(id string) (*Client, bool) {
 	}
 	// not found
 	return nil, false
+}
+
+// Stop ... start tcp server
+func (server *Server) Stop() {
+
 }
 
 // Start .. starts the created server

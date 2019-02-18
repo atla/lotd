@@ -3,20 +3,28 @@ package game
 import (
 	"sync"
 
+	"go.uber.org/fx"
+
+	"github.com/atla/lotd/dba"
 	"github.com/atla/lotd/users"
 )
 
 // Game ... default entity to structure rooms
+// This is the main class that controls the real-time game flow for tcp and websocket clients.
+// this is the live world, all changes to it will be stored to the database.
+// The game instance can be recreated/loaded from a World instance inside the database
 type Game struct {
 	id    string
 	title string
-	world *World
+
+	Repository dba.Repository
 
 	MOTD string
 
 	running    bool
 	SystemUser *users.User
 
+	// messages
 	OnMessageReceived chan *Message
 	OnUserJoined      chan *UserJoined
 	OnUserQuit        chan *UserQuit
@@ -44,13 +52,21 @@ type Receiver interface {
 	OnMessage(message interface{})
 }
 
+// Module ... fx module export
+var Module = fx.Provide(func(motd string, dbaccess *dba.DBAccess, repository dba.Repository) *Game {
+	game := GetInstance()
+	game.MOTD = motd
+	game.Repository = repository
+	return game
+})
+
 /*
 func (game *Game) Unsubscribe(receiver *Receiver) {
 	game.Receivers = delete(game.Receivers, receiver)
 }*/
 
-// GetInstance ... returns the usermanager instance
-func GetInstance() *Game {
+// Instance ... returns the game instance
+func Instance() *Game {
 	once.Do(func() {
 		instance = &Game{
 			running:          true,
@@ -58,7 +74,7 @@ func GetInstance() *Game {
 			MOTD:             "Welcome",
 			SystemUser:       users.NewUser("LOTD", "", ""),
 			CommandProcessor: NewCommandProcessor(),
-			world:            NewWorld("LOTD"),
+
 			// event channels
 			OnMessageReceived:  make(chan *Message, 20),
 			OnUserJoined:       make(chan *UserJoined, 20),

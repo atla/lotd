@@ -8,9 +8,16 @@ import (
 
 	"github.com/atla/lotd/game"
 	"github.com/atla/lotd/users"
+	"go.uber.org/fx"
 
 	"github.com/gorilla/websocket"
 )
+
+// Module ... fx module export
+var Module = fx.Provide(func(game *game.Game) *Server {
+	// TODO: read TCP port from environment variable
+	return NewServer(game, "8000")
+})
 
 // Server ... Define our message object
 type Server struct {
@@ -25,14 +32,14 @@ type Server struct {
 }
 
 // NewServer ... creates a new websocketserver instance
-func NewServer(port string) *Server {
+func NewServer(game *game.Game, port string) *Server {
 	server := &Server{
 		port:      port,
 		Clients:   make(map[*websocket.Conn]bool),
 		Users:     make(map[string]*websocket.Conn),
 		Broadcast: make(chan Message),
 		upgrader:  websocket.Upgrader{},
-		game:      game.GetInstance(),
+		game:      game,
 	}
 
 	server.MessageHandler = NewMessageHandler(server)
@@ -161,6 +168,11 @@ func (server *Server) OnSystemMessage(message *game.Message) {
 		Username: "#SYSTEM",
 		Message:  message.Data,
 	}
+}
+
+// Stop ... start websocketserver
+func (server *Server) Stop() {
+
 }
 
 // Start ... start websocketserver
